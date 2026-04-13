@@ -177,23 +177,17 @@ load_options:
   scale: 1 # scales all load time-series, i.e. 2 = doubles load
 
 co2_budget:
-  enable: false
+  enable: true
   override_co2opt: true
   co2base_value: co2limit # choose from: [co2limit, co2base, absolute, {float}]
   year:
-    2020: 1.0
-    2025: 0.85
-    2030: 0.70
-    2035: 0.55
-    2040: 0.40
-    2045: 0.25
-    2050: 0.1
+    2030: 1.00
 
 electricity:
-  base_voltage: 330.
+  base_voltage: 380.
   voltages: [132., 220., 275., 330., 500.]
-  co2limit: 450e6 # 7.75e+7 # European default, 0.05 * 3.1e9*0.5, needs to be adjusted for Africa
-  co2base: 620e6 # 1.487e+9 # European default, adjustment to Africa necessary
+  co2limit: 250.7e6 # t CO2eq
+  co2base: 321.8e6 # t CO2eq
   agg_p_nom_limits: # enables to set country-wise maximum and minimum generation capacities for generators (e.g. renewables, nuclear, and geothermal)
     file: data/agg_p_nom_minmax.csv # path to csv file containing country-wise generation capacity limits
     include_existing: false # false: only new built capacities are constrained; true: existing capacities are accounted in the constraints
