@@ -63,6 +63,7 @@ gurobi = "*"
 rich = "*"
 highspy = "==1.14.0"
 openjdk = "17.*"
+streamlit = ">=1.56.0,<2"
 
 [pypi-dependencies]
 currencyconverter = "*"
