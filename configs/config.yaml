@@ -52,7 +52,7 @@ scenario:
   planning_horizons: # investment years for myopic and perfect; or costs year for overnight
   - 2030
   sopts:
-  - "144h"
+  - "3h"
   demand:
   - "AB"
 
@@ -179,15 +179,15 @@ load_options:
 co2_budget:
   enable: true
   override_co2opt: true
-  co2base_value: co2limit # choose from: [co2limit, co2base, absolute, {float}]
+  co2base_value: co2base # choose from: [co2limit, co2base, absolute, {float}]
   year:
-    2030: 1.00
+    2030: 0.78 # to match co2limit (~ co2base * 0.78)
 
 electricity:
-  base_voltage: 380.
+  base_voltage: 330.
   voltages: [132., 220., 275., 330., 500.]
-  co2limit: 250.7e6 # t CO2eq
-  co2base: 321.8e6 # t CO2eq
+  co2limit: 250.7e+6 # t CO2eq (expected in 2030 considering a 71% contribution from mining, manufacturing, electricity, gas, water & waste
+  co2base: 321.8e+6 # t CO2eq (2023 - includes mining, manufacturing, electricity, gas, water & waste)
   agg_p_nom_limits: # enables to set country-wise maximum and minimum generation capacities for generators (e.g. renewables, nuclear, and geothermal)
     file: data/agg_p_nom_minmax.csv # path to csv file containing country-wise generation capacity limits
     include_existing: false # false: only new built capacities are constrained; true: existing capacities are accounted in the constraints
@@ -813,7 +813,7 @@ solving:
 
   solver:
     name: highs
-    options: highs-default
+    options: highs-hipo
 
   solver_options:
     highs-default:
