@@ -46,11 +46,11 @@ run:
 
 scenario:
   simpl: [""]
-  ll: ["copt"]
+  ll: ["v1"]
   clusters: [10]
   opts: [Co2L-3h]
   planning_horizons: # investment years for myopic and perfect; or costs year for overnight
-  - 2020
+  - 2025
   sopts:
   - "3h"
   demand:
@@ -213,8 +213,8 @@ electricity:
     Store: [battery, H2]
     Link: [] # H2 pipeline
 
-  powerplants_filter: (DateOut >= 2022 or DateOut != DateOut) and (DateIn <= 2023 or DateIn != DateIn)
-  custom_powerplants: false #  "false" use only powerplantmatching (ppm) data, "merge" combines ppm and custom powerplants, "replace" use only custom powerplants
+  powerplants_filter: (DateOut >= 2025 or DateOut != DateOut) and (DateIn <= 2025 or DateIn != DateIn)
+  custom_powerplants: merge #  "false" use only powerplantmatching (ppm) data, "merge" combines ppm and custom powerplants, "replace" use only custom powerplants
 
   conventional_carriers: [nuclear, oil, OCGT, CCGT, coal, lignite, geothermal, biomass]
   renewable_carriers: [solar, onwind, offwind-ac, offwind-dc, hydro]
@@ -402,7 +402,7 @@ renewable:
 # TODO: Needs to be adjusted for Africa.
 # Costs Configuration
 costs:
-  year: 2020 # cost file selection, i.e. costs_2030.csv in this case; reference year for costs is always 2020
+  year: 2025 # cost file selection, i.e. costs_2030.csv in this case; reference year for costs is always 2020
   technology_data_version: v0.14.0
   discountrate: [0.071] #, 0.086, 0.111]
   country_specific_data: "US" # (optional) Reference to the desired technology-data directory for techno-economic input data; Only "" and "US" supported, for other values check the technology-data output directory
@@ -664,17 +664,17 @@ sector:
   transport_internal_combustion_efficiency: 0.3
 
   land_transport_fuel_cell_share: # 1 means all FCEVs HERE
-    BU_2020: 0.00
-    AP_2020: 0.00
-    NZ_2020: 0.00
-    DF_2020: 0.00
-    AB_2020: 0.00
+    BU_2025: 0.00
+    AP_2025: 0.00
+    NZ_2025: 0.00
+    DF_2025: 0.00
+    AB_2025: 0.00
   land_transport_electric_share: # 1 means all EVs  # This leads to problems when non-zero HERE
-    BU_2020: 0.00
-    AP_2020: 0.00
-    NZ_2020: 0.00
-    DF_2020: 0.00
-    AB_2020: 0.00
+    BU_2025: 0.00
+    AP_2025: 0.00
+    NZ_2025: 0.00
+    DF_2025: 0.00
+    AB_2025: 0.00
 
   dynamic_transport:
     enable: false # If "True", then the BEV and FCEV shares are obtained depending on the "Co2L"-wildcard (e.g. "Co2L0.70: 0.10"). If "False", then the shares are obtained depending on the "demand" wildcard and "planning_horizons" wildcard as listed below (e.g. "DF_2050: 0.08")
@@ -744,11 +744,11 @@ sector:
   shipping_hydrogen_liquefaction: false
   shipping_average_efficiency: 0.4 #For conversion of fuel oil to propulsion in 2011
   shipping_hydrogen_share: #1.0
-    BU_2020: 0.00
-    AP_2020: 0.00
-    NZ_2020: 0.00
-    DF_2020: 0.00
-    AB_2020: 0.00
+    BU_2025: 0.00
+    AP_2025: 0.00
+    NZ_2025: 0.00
+    DF_2025: 0.00
+    AB_2025: 0.00
   airport_sizing_factor: 3
   international_bunkers: false #Whether or not to count the emissions of international aviation and navigation
 
