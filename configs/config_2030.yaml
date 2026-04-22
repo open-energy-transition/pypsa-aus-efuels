@@ -35,7 +35,8 @@ enable:
 
 
 
-custom_rules: [] # Default empty [] or link to custom rule file e.g. ["my_folder/my_rules.smk"] that add rules to Snakefile
+custom_rules: # Default empty [] or link to custom rule file e.g. ["my_folder/my_rules.smk"] that add rules to Snakefile
+- "../scripts/custom_rules.smk"
 
 run:
   name: "" # use this to keep track of runs with different settings

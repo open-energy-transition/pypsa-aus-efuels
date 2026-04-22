@@ -35,7 +35,8 @@ enable:
 
 
 
-custom_rules: [] # Default empty [] or link to custom rule file e.g. ["my_folder/my_rules.smk"] that add rules to Snakefile
+custom_rules: # Default empty [] or link to custom rule file e.g. ["my_folder/my_rules.smk"] that add rules to Snakefile
+- "../scripts/custom_rules.smk"
 
 run:
   name: "" # use this to keep track of runs with different settings
@@ -716,10 +717,11 @@ sector:
 
   electricity_distribution_grid: true # adds low voltage buses and shifts AC loads, BEVs, heat pumps, and resistive heaters, micro CHPs to low voltage buses if technologies are present
   solar_rooftop: # adds distribution side customer rooftop PV (only work if electricity_distribution_grid: true)
-    enable: true
+    enable: false
     kW_per_m2: 0.1
     m2_per_person: 20
     use_building_size: false
+    existing: true
     # proportion of rooftop suitable for PV installation
     install_ratio:
       0: 0
