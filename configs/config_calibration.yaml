@@ -210,7 +210,7 @@ electricity:
           # from the Generator list below, as these offshore wind technologies require coastline access.
     Generator: []
     StorageUnit: [] # battery, H2
-    Store: [battery, H2]
+    Store: []
     Link: [] # H2 pipeline
 
   powerplants_filter: (DateOut >= 2025 or DateOut != DateOut) and (DateIn <= 2025 or DateIn != DateIn)
@@ -220,7 +220,7 @@ electricity:
   renewable_carriers: [solar, onwind, offwind-ac, offwind-dc, hydro]
 
   estimate_renewable_capacities:
-    stats: "irena" # False, = greenfield expansion, 'irena' uses IRENA stats to add expansion limits
+    stats: false # False, = greenfield expansion, 'irena' uses IRENA stats to add expansion limits
     year: 2023 # Reference year, available years for IRENA stats are 2000 to 2023
     p_nom_min: 1 # any float, scales the minimum expansion acquired from stats, i.e. 110% of <years>'s capacities => p_nom_min: 1.1
     p_nom_max: false # sets the expansion constraint, False to deactivate this option and use estimated renewable potentials determine by the workflow, float scales the p_nom_min factor accordingly
