@@ -25,14 +25,14 @@ from scripts._helper import (
 logger = create_logger(__name__)
 
 
-def _add_nh3_store(n, nh3_buses, costs, store_suffix="ammonia store"):
+def _add_ammonia_store(n, ammonia_buses, costs, store_suffix="ammonia store"):
     """
     Add extendable ammonia storage.
     """
     n.madd(
         "Store",
-        nh3_buses.index + f" {store_suffix}",
-        bus=nh3_buses.values,
+        ammonia_buses.index + f" {store_suffix}",
+        bus=ammonia_buses.values,
         e_nom_extendable=True,
         e_cyclic=True,
         carrier=store_suffix,
@@ -43,42 +43,42 @@ def _add_nh3_store(n, nh3_buses, costs, store_suffix="ammonia store"):
 
 def add_grey_ammonia(n, industrial_demand, costs, config, nhours):
     """
-    Add grey ammonia explicit sector:
-    gas -> grey H2 (SMR / SMR CC) -> grey NH3
+    Add grey-ammonia explicit sector:
+    gas -> grey H2 (SMR / SMR CC) -> grey-ammonia
     """
     if "grey_ammonia" not in industrial_demand.columns:
-        logger.info("No grey_ammonia column found. Skipping grey ammonia.")
+        logger.info("No grey_ammonia column found. Skipping grey-ammonia.")
         return
 
     nodes = industrial_demand.index
-    grey_nh3_bus = pd.Series(nodes + " grey NH3", index=nodes)
+    grey_ammonia_bus = pd.Series(nodes + " grey-ammonia", index=nodes)
     grey_h2_bus = pd.Series(nodes + " grey H2", index=nodes)
 
-    # Carrier
-    if "grey NH3" not in n.carriers.index:
-        n.add("Carrier", "grey NH3")
+    if "grey-ammonia" not in n.carriers.index:
+        n.add("Carrier", "grey-ammonia")
 
-    # NH3 buses
     n.madd(
         "Bus",
-        grey_nh3_bus.values,
+        grey_ammonia_bus.values,
         location=nodes,
-        carrier="grey NH3",
+        carrier="grey-ammonia",
     )
-    logger.info("Added grey ammonia buses and carrier.")
+    logger.info("Added grey-ammonia buses and carrier.")
 
-    # Optional production flexibility
-    if "production_flexibility" in config.get("custom_industry", {}):
-        if "ammonia" in config["custom_industry"]["production_flexibility"]:
-            _add_nh3_store(n, grey_nh3_bus, costs, store_suffix="grey ammonia store")
-            logger.info("Added grey ammonia stores.")
+    if "ammonia" in config.get("custom_industry", {}).get("production_flexibility", []):
+        _add_ammonia_store(
+            n,
+            grey_ammonia_bus,
+            costs,
+            store_suffix="grey ammonia store",
+        )
+        logger.info("Added grey-ammonia stores.")
 
-    # Grey Haber-Bosch: electricity + grey H2 -> grey NH3
     n.madd(
         "Link",
         nodes + " grey Haber-Bosch",
         bus0=nodes,
-        bus1=grey_nh3_bus.values,
+        bus1=grey_ammonia_bus.values,
         bus2=grey_h2_bus.values,
         p_nom_extendable=True,
         carrier="grey Haber-Bosch",
@@ -93,32 +93,29 @@ def add_grey_ammonia(n, industrial_demand, costs, config, nhours):
     )
     logger.info("Added grey Haber-Bosch process.")
 
-    # Grey ammonia demand
     p_set = (
         industrial_demand.loc[nodes, "grey_ammonia"].rename(
-            index=lambda x: x + " grey NH3"
+            index=lambda x: x + " grey-ammonia"
         )
         / nhours
     )
 
     n.madd(
         "Load",
-        grey_nh3_bus.values,
-        bus=grey_nh3_bus.values,
+        grey_ammonia_bus.values,
+        bus=grey_ammonia_bus.values,
         p_set=p_set,
-        carrier="grey NH3",
+        carrier="grey-ammonia",
     )
-    logger.info("Added grey ammonia demand.")
+    logger.info("Added grey-ammonia demand.")
 
-    # CCS retrofit for grey ammonia: retrofit SMR -> SMR CC on grey H2 buses
-    if "ammonia" in config["custom_industry"]["ccs_retrofit"]:
+    if "ammonia" in config.get("custom_industry", {}).get("ccs_retrofit", []):
         smr_links = n.links.query("carrier == 'SMR'").copy()
 
         if smr_links.empty:
             logger.warning("No SMR links found. Skipping ammonia CCS retrofit.")
             return
 
-        # only keep SMR links producing grey H2 when hydrogen_colors is enabled
         smr_links = smr_links[smr_links["bus1"].str.endswith(" grey H2")]
 
         if smr_links.empty:
@@ -163,47 +160,47 @@ def add_grey_ammonia(n, industrial_demand, costs, config, nhours):
             capital_cost=capital_cost,
             lifetime=costs.at["ammonia carbon capture retrofit", "lifetime"],
         )
-        logger.info("Added SMR CC for grey ammonia retrofit.")
+        logger.info("Added SMR CC for grey-ammonia retrofit.")
 
 
 def add_e_ammonia(n, industrial_demand, costs, config, nhours):
     """
     Add e-ammonia explicit sector:
-    electricity + grid H2 -> e NH3
+    electricity + grid H2 -> e-ammonia
     """
     if "e_ammonia" not in industrial_demand.columns:
         logger.info("No e_ammonia column found. Skipping e-ammonia.")
         return
 
     nodes = industrial_demand.index
-    e_nh3_bus = pd.Series(nodes + " e NH3", index=nodes)
+    e_ammonia_bus = pd.Series(nodes + " e-ammonia", index=nodes)
     grid_h2_bus = pd.Series(nodes + " grid H2", index=nodes)
 
-    # Carrier
-    if "e NH3" not in n.carriers.index:
-        n.add("Carrier", "e NH3")
+    if "e-ammonia" not in n.carriers.index:
+        n.add("Carrier", "e-ammonia")
 
-    # NH3 buses
     n.madd(
         "Bus",
-        e_nh3_bus.values,
+        e_ammonia_bus.values,
         location=nodes,
-        carrier="e NH3",
+        carrier="e-ammonia",
     )
     logger.info("Added e-ammonia buses and carrier.")
 
-    # Optional production flexibility
-    if "production_flexibility" in config.get("custom_industry", {}):
-        if "ammonia" in config["custom_industry"]["production_flexibility"]:
-            _add_nh3_store(n, e_nh3_bus, costs, store_suffix="e ammonia store")
-            logger.info("Added e-ammonia stores.")
+    if "ammonia" in config.get("custom_industry", {}).get("production_flexibility", []):
+        _add_ammonia_store(
+            n,
+            e_ammonia_bus,
+            costs,
+            store_suffix="e ammonia store",
+        )
+        logger.info("Added e-ammonia stores.")
 
-    # e-Haber-Bosch: electricity + grid H2 -> e NH3
     n.madd(
         "Link",
         nodes + " e Haber-Bosch",
         bus0=nodes,
-        bus1=e_nh3_bus.values,
+        bus1=e_ammonia_bus.values,
         bus2=grid_h2_bus.values,
         p_nom_extendable=True,
         carrier="e Haber-Bosch",
@@ -218,91 +215,67 @@ def add_e_ammonia(n, industrial_demand, costs, config, nhours):
     )
     logger.info("Added e-Haber-Bosch process using grid H2.")
 
-    # e-ammonia demand
     p_set = (
-        industrial_demand.loc[nodes, "e_ammonia"].rename(index=lambda x: x + " e NH3")
+        industrial_demand.loc[nodes, "e_ammonia"].rename(
+            index=lambda x: x + " e-ammonia"
+        )
         / nhours
     )
 
     n.madd(
         "Load",
-        e_nh3_bus.values,
-        bus=e_nh3_bus.values,
+        e_ammonia_bus.values,
+        bus=e_ammonia_bus.values,
         p_set=p_set,
-        carrier="e NH3",
+        carrier="e-ammonia",
     )
     logger.info("Added e-ammonia demand.")
 
 
-def _add_methanol_store(n, methanol_buses, costs, store_suffix="methanol store"):
-    """
-    Add extendable methanol storage.
-    """
-    n.madd(
-        "Store",
-        methanol_buses.index + f" {store_suffix}",
-        bus=methanol_buses.values,
-        e_nom_extendable=True,
-        e_cyclic=True,
-        carrier=store_suffix,
-        # TODO: replace with dedicated methanol storage cost when available
-        capital_cost=0,
-        lifetime=25,
-    )
-
-
 def add_grey_methanol(n, industrial_demand, costs, config, nhours):
     """
-    Add grey methanol explicit sector:
-    gas -> grey methanol
+    Add grey-methanol explicit sector:
+    gas + electricity -> grey-methanol + process CO2
     """
     if "grey_methanol" not in industrial_demand.columns:
-        logger.info("No grey_methanol column found. Skipping grey methanol.")
+        logger.info("No grey_methanol column found. Skipping grey-methanol.")
         return
 
     nodes = industrial_demand.index
-    grey_methanol_bus = pd.Series(nodes + " grey methanol", index=nodes)
+    grey_methanol_bus = pd.Series(nodes + " grey-methanol", index=nodes)
 
-    if "grey methanol" not in n.carriers.index:
-        n.add("Carrier", "grey methanol")
+    if "grey-methanol" not in n.carriers.index:
+        n.add("Carrier", "grey-methanol")
 
     n.madd(
         "Bus",
         grey_methanol_bus.values,
         location=nodes,
-        carrier="grey methanol",
+        carrier="grey-methanol",
     )
-    logger.info("Added grey methanol buses and carrier.")
+    logger.info("Added grey-methanol buses and carrier.")
 
-    if "production_flexibility" in config.get("custom_industry", {}):
-        if "methanol" in config["custom_industry"]["production_flexibility"]:
-            _add_methanol_store(
-                n,
-                grey_methanol_bus,
-                costs,
-                store_suffix="grey methanol store",
-            )
-            logger.info("Added grey methanol stores.")
-
-    # Grey methanol: gas -> methanol
-    # TODO: replace placeholders with dedicated methanol techno-economic data
     n.madd(
         "Link",
         nodes + " grey methanol synthesis",
         bus0=nodes + " gas",
         bus1=grey_methanol_bus.values,
+        bus2="co2 atmosphere",
+        bus3=nodes,
         p_nom_extendable=True,
         carrier="grey methanol synthesis",
-        efficiency=1.0,
-        capital_cost=0,
-        marginal_cost=0,
-        lifetime=25,
+        efficiency=costs.at["grey methanol synthesis", "efficiency"],
+        efficiency2=costs.at["grey methanol synthesis", "carbondioxide-output"],
+        efficiency3=-costs.at["grey methanol synthesis", "electricity-input"],
+        capital_cost=costs.at["grey methanol synthesis", "fixed"],
+        marginal_cost=costs.at["grey methanol synthesis", "VOM"],
+        lifetime=costs.at["grey methanol synthesis", "lifetime"],
     )
     logger.info("Added grey methanol synthesis links.")
 
     p_set = (
         industrial_demand.loc[nodes, "grey_methanol"].rename(
-            index=lambda x: x + " grey methanol"
+            index=lambda x: x + " grey-methanol"
         )
         / nhours
     )
@@ -312,67 +285,63 @@ def add_grey_methanol(n, industrial_demand, costs, config, nhours):
         grey_methanol_bus.values,
         bus=grey_methanol_bus.values,
         p_set=p_set,
-        carrier="grey methanol",
+        carrier="grey-methanol",
     )
-    logger.info("Added grey methanol demand.")
+    logger.info("Added grey-methanol demand.")
 
 
 def add_e_methanol(n, industrial_demand, costs, config, nhours):
     """
     Add e-methanol explicit sector:
-    grid H2 + co2 stored -> e methanol
+    electricity + grid H2 + co2 stored -> e-methanol
     """
     if "e_methanol" not in industrial_demand.columns:
         logger.info("No e_methanol column found. Skipping e-methanol.")
         return
 
     nodes = industrial_demand.index
-    e_methanol_bus = pd.Series(nodes + " e methanol", index=nodes)
+    e_methanol_bus = pd.Series(nodes + " e-methanol", index=nodes)
     grid_h2_bus = pd.Series(nodes + " grid H2", index=nodes)
     co2_stored_bus = pd.Series(nodes + " co2 stored", index=nodes)
 
-    if "e methanol" not in n.carriers.index:
-        n.add("Carrier", "e methanol")
+    if "e-methanol" not in n.carriers.index:
+        n.add("Carrier", "e-methanol")
 
     n.madd(
         "Bus",
         e_methanol_bus.values,
         location=nodes,
-        carrier="e methanol",
+        carrier="e-methanol",
     )
     logger.info("Added e-methanol buses and carrier.")
 
-    if "production_flexibility" in config.get("custom_industry", {}):
-        if "methanol" in config["custom_industry"]["production_flexibility"]:
-            _add_methanol_store(
-                n,
-                e_methanol_bus,
-                costs,
-                store_suffix="e methanol store",
-            )
-            logger.info("Added e-methanol stores.")
-
-    # e-methanol: grid H2 + co2 stored -> methanol
-    # TODO: replace placeholders with dedicated e-methanol techno-economic data
     n.madd(
         "Link",
-        nodes + " e methanol synthesis",
-        bus0=grid_h2_bus.values,
+        nodes + " methanolisation",
+        bus0=nodes,
         bus1=e_methanol_bus.values,
-        bus2=co2_stored_bus.values,
+        bus2=grid_h2_bus.values,
+        bus3=co2_stored_bus.values,
         p_nom_extendable=True,
-        carrier="e methanol synthesis",
-        efficiency=1.0,
-        efficiency2=-1.0,
-        capital_cost=0,
-        marginal_cost=0,
-        lifetime=25,
+        carrier="e-methanol synthesis",
+        efficiency=1 / costs.at["methanolisation", "electricity-input"],
+        efficiency2=-costs.at["methanolisation", "hydrogen-input"]
+        / costs.at["methanolisation", "electricity-input"],
+        efficiency3=-costs.at["methanolisation", "carbondioxide-input"]
+        / costs.at["methanolisation", "electricity-input"],
+        capital_cost=costs.at["methanolisation", "fixed"]
+        / costs.at["methanolisation", "electricity-input"],
+        marginal_cost=costs.at["methanolisation", "VOM"]
+        / costs.at["methanolisation", "electricity-input"],
+        lifetime=costs.at["methanolisation", "lifetime"],
     )
-    logger.info("Added e-methanol synthesis links using grid H2 and co2 stored.")
+    logger.info(
+        "Added methanolisation links using electricity, grid H2 and co2 stored."
+    )
 
     p_set = (
         industrial_demand.loc[nodes, "e_methanol"].rename(
-            index=lambda x: x + " e methanol"
+            index=lambda x: x + " e-methanol"
         )
         / nhours
     )
@@ -382,7 +351,7 @@ def add_e_methanol(n, industrial_demand, costs, config, nhours):
         e_methanol_bus.values,
         bus=e_methanol_bus.values,
         p_set=p_set,
-        carrier="e methanol",
+        carrier="e-methanol",
     )
     logger.info("Added e-methanol demand.")
 
@@ -423,6 +392,7 @@ if __name__ == "__main__":
         snakemake.input.industrial_energy_demand_per_node,
         index_col=0,
     )
+    industrial_demand = industrial_demand.drop(columns=["country"], errors="ignore")
 
     nhours = n.snapshot_weightings.generators.sum()
     Nyears = nhours / 8760
