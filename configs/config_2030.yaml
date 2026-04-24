@@ -35,14 +35,13 @@ enable:
 
 custom_industry:
   ccs_retrofit: [ammonia] # methanol
-
+  enable: true
   targets_tpa:
     ammonia: 4000000
-    #methanol: 500000
-
+    methanol: 500000
   e_share:
     ammonia: 0.0
-    #methanol: 0.0
+    methanol: 0.0
 
 custom_rules: # Default empty [] or link to custom rule file e.g. ["my_folder/my_rules.smk"] that add rules to Snakefile
 - "../scripts/custom_rules.smk"
