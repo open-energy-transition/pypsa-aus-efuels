@@ -37,8 +37,8 @@ custom_industry:
   ccs_retrofit: [ammonia] # methanol
   enable: true
   targets_tpa:
-    ammonia: 4000000
-    methanol: 500000
+    ammonia: 2400000
+    methanol: 2400000
   e_share:
     ammonia: 0.0
     methanol: 0.0
