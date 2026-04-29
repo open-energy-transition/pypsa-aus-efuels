@@ -107,3 +107,33 @@ if config.get("custom_industry", {}).get("enable", False):
             mem_mb=4000,
         script:
             "../scripts/custom_add_explicit_industry.py"
+
+
+if config.get("custom_hydrogen_demand", {}).get("enable", False):
+
+    rule add_custom_hydrogen_demand:
+        input:
+            network=(
+                "results/"
+                + SECDIR
+                + "prenetworks/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{sopts}_{planning_horizons}_{discountrate}_{demand}_custom_industry.nc"
+            ),
+        output:
+            modified_network=(
+                "results/"
+                + SECDIR
+                + "prenetworks/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{sopts}_{planning_horizons}_{discountrate}_{demand}_custom_hydrogen_demand.nc"
+            ),
+        log:
+            "logs/"
+            + SECDIR
+            + "add_custom_hydrogen_demand/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{sopts}_{planning_horizons}_{discountrate}_{demand}.log",
+        benchmark:
+            "benchmarks/"
+            + SECDIR
+            + "add_custom_hydrogen_demand/elec_s{simpl}_{clusters}_ec_l{ll}_{opts}_{sopts}_{planning_horizons}_{discountrate}_{demand}",
+        threads: 1
+        resources:
+            mem_mb=4000,
+        script:
+            "../scripts/custom_add_hydrogen_demand.py"
