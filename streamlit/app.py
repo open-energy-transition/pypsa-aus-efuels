@@ -144,6 +144,12 @@ st.set_page_config(layout="wide", page_title=title)
 st.set_page_config(page_title=f"{title} UI", layout="wide")
 st.title(f"{title} Interactive Manager")
 st.write("Walk through the tabs below from left to the right ...")
+with st.expander("Disclaimer", expanded=False):
+    st.write(
+        """
+        The content of this document/web page is intended for the exclusive use of Open Energy Transition's client and other contractually agreed recipients. It may only be made available in whole or in part to third parties with the client’s consent and on a non-reliance basis. OET is not liable to third parties for the completeness and accuracy of the information provided therein.
+        """
+    )
 
 if "n" not in st.session_state:
     st.session_state.n = None
@@ -239,6 +245,12 @@ if t_welcome.open:
             **The entire project source is available on GitHub: https://github.com/open-energy-transition/pypsa-aus-efuel.**
             """
         )
+        with st.expander("Project Description", expanded=False):
+            st.write(
+                """
+                **tbd.**
+                """
+            )
 
 # --- TAB ECONOMIC PARAMETERS
 if t_economic.open:
