@@ -92,7 +92,7 @@ tech_data: dict[str, dict[str, int | float | str]] = {
     },
 }
 
-load_data: dict[str, dict[str, int | str]] = {
+load_data: dict[str, dict[str, int | float | str]] = {
     #    "electricity": {"multiplier": 1, "label": "Electricity"},
     "diesel": {"multiplier": 0, "label": "Diesel", "cost": 2500},
     "e-hydrogen": {"multiplier": 1, "label": "eHydrogen", "cost": 2000},
