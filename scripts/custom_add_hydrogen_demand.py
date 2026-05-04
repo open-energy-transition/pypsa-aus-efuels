@@ -30,9 +30,16 @@ def add_custom_hydrogen_demand(n, config, nhours):
 
     annual_demand_tpa = float(h2_config.get("annual_demand_tpa", 0.0))
 
-    if annual_demand_tpa <= 0:
-        logger.info("Custom hydrogen demand enabled but annual_demand_tpa is zero.")
-        return n
+    if annual_demand_tpa < 0:
+        raise ValueError(
+            "custom_hydrogen_demand.annual_demand_tpa must be non-negative."
+        )
+
+    if annual_demand_tpa == 0:
+        logger.info(
+            "Custom hydrogen demand enabled with annual_demand_tpa = 0. "
+            "Adding zero-valued custom H2 demand load and supply links."
+        )
 
     annual_demand_mwh = annual_demand_tpa * H2_MWH_PER_TON
 

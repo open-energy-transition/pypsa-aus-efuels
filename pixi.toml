@@ -63,6 +63,7 @@ gurobi = "*"
 rich = "*"
 highspy = { version = ">=1.13.2.dev0", channel = "conda-forge/label/dev" }
 openjdk = "17.*"
+streamlit = ">=1.57.0,<2"
 
 [pypi-dependencies]
 currencyconverter = "*"
