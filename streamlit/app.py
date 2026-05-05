@@ -772,7 +772,7 @@ if t_optimization.open:
                         weeks = st.radio(
                             "Select the week within each selected month:",
                             [1, 2, 3, 4],
-                            index=2,
+                            index=0,
                             horizontal=True,
                         )
                     else:
