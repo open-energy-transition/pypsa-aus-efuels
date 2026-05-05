@@ -250,7 +250,7 @@ def build_scenario_id(
         [
             country,
             str(year),
-            f"{clusters}c",
+            f"{clusters}",
             resolution,
             cost_tag,
             f"H2_{compact_number_tag(demand['custom_h2'])}Mt",
@@ -529,7 +529,14 @@ if t_economic.open:
                             new_cc[d] * default_om / 100
                         )
 
-                st.session_state.costs_modified = True
+                st.session_state.costs_modified = any(
+                    not np.isclose(new_dr[d], old_dr[d])
+                    or not np.isclose(
+                        new_cc[d], investment_cost(old_cc[d], new_dr[d], old_lt[d])
+                    )
+                    or not np.isclose(new_mc[d], old_mc[d])
+                    for d in tech_data
+                )
                 st.success("Updated details for mentioned technologies ...")
                 st.write(
                     "Remark: in this table the column capital_cost refersto annuity plus fixed O&M costs."
@@ -765,7 +772,7 @@ if t_optimization.open:
                         weeks = st.radio(
                             "Select the week within each selected month:",
                             [1, 2, 3, 4],
-                            index=1,
+                            index=2,
                             horizontal=True,
                         )
                     else:
