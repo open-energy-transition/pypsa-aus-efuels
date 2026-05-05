@@ -46,9 +46,20 @@ def rename_carrier(carrier: str) -> str:
         "hydro": "Hydro",
         "biomass": "Biomass",
         "battery discharger": "Battery",
-        "H2 Electrolysis": "Hydrogen from electrolysis",
-        "grey H2": "Grey hydrogen",
-        "blue H2": "Blue hydrogen",
+        "Alkaline electrolyzer large": "Alkaline electrolyzer large",
+        "Alkaline electrolyzer medium": "Alkaline electrolyzer medium",
+        "Alkaline electrolyzer small": "Alkaline electrolyzer small",
+        "PEM electrolyzer": "PEM electrolyzer",
+        "SOEC": "SOEC",
+        "SMR": "SMR",
+        "Solid biomass steam reforming": "Biomass steam reforming",
+        "Biomass gasification": "Biomass gasification",
+        "Biomass gasification CC": "Biomass gasification + CCS",
+        "Natural gas steam reforming": "Natural gas steam reforming",
+        "Natural gas steam reforming CC": "Natural gas steam reforming + CCS",
+        "Coal gasification": "Coal gasification",
+        "Coal gasification CC": "Coal gasification + CCS",
+        "Heavy oil partial oxidation": "Heavy oil partial oxidation",
         "grey Haber-Bosch": "Grey ammonia",
         "e Haber-Bosch": "e-ammonia",
         "grey methanol synthesis": "Grey methanol",
@@ -238,9 +249,18 @@ def compute_annual_flow_by_carrier(
 
         if category == "Hydrogen":
             link_carriers = [
-                "H2 Electrolysis",
-                "grey H2",
-                "blue H2",
+                c
+                for c in n.links.carrier.unique()
+                if any(
+                    k in c.lower()
+                    for k in [
+                        "electroly",
+                        "smr",
+                        "reforming",
+                        "gasification",
+                        "hydrogen",
+                    ]
+                )
             ]
             conversion = mwh_per_tonne["custom_h2"]
 
@@ -321,3 +341,176 @@ def compute_annual_flow_by_carrier(
             )
 
     return pd.DataFrame(rows)
+
+
+def get_available_dispatch_categories() -> list[str]:
+    """Return categories exposed in the dispatch explorer."""
+    return [
+        "Electricity",
+        "Hydrogen",
+        "Ammonia / Methanol",
+    ]
+
+
+def compute_dispatch_by_carrier(
+    n: pypsa.Network,
+    category: str,
+) -> pd.DataFrame:
+    """Compute dispatch time series by production technology."""
+    if category == "Electricity":
+        gen_carriers = [
+            "solar",
+            "solar rooftop",
+            "onwind",
+            "offwind-ac",
+            "offwind-dc",
+            "ror",
+            "biomass",
+            "coal",
+            "lignite",
+            "oil",
+        ]
+
+        link_carriers = [
+            "OCGT",
+            "CCGT",
+            "coal",
+            "lignite",
+            "oil",
+            "biomass",
+            "battery discharger",
+        ]
+
+        frames = []
+
+        gens = n.generators[n.generators["carrier"].isin(gen_carriers)]
+        if not gens.empty:
+            available = gens.index.intersection(n.generators_t.p.columns)
+
+            if len(available) > 0:
+                gen_dispatch = (
+                    n.generators_t.p[available]
+                    .clip(lower=0)
+                    .groupby(n.generators.loc[available, "carrier"], axis=1)
+                    .sum()
+                )
+                frames.append(gen_dispatch)
+
+        storage_units = n.storage_units[
+            n.storage_units["carrier"].isin(["PHS", "hydro"])
+        ]
+        if not storage_units.empty:
+            available = storage_units.index.intersection(n.storage_units_t.p.columns)
+
+            if len(available) > 0:
+                storage_dispatch = (
+                    n.storage_units_t.p[available]
+                    .clip(lower=0)
+                    .groupby(n.storage_units.loc[available, "carrier"], axis=1)
+                    .sum()
+                )
+                frames.append(storage_dispatch)
+
+        links = n.links[n.links["carrier"].isin(link_carriers)]
+        if not links.empty and "p1" in n.links_t:
+            available = links.index.intersection(n.links_t.p1.columns)
+
+            if len(available) > 0:
+                link_dispatch = (
+                    -n.links_t.p1[available]
+                    .clip(upper=0)
+                    .groupby(n.links.loc[available, "carrier"], axis=1)
+                    .sum()
+                )
+                frames.append(link_dispatch)
+
+        if not frames:
+            return pd.DataFrame()
+
+        dispatch = pd.concat(frames, axis=1)
+        dispatch = dispatch.groupby(dispatch.columns, axis=1).sum()
+        dispatch = dispatch.rename(columns=rename_carrier)
+
+        return dispatch / 1e3  # GW
+
+    if category == "Hydrogen":
+        specs = {
+            "Alkaline electrolyzer large": 33.0,
+            "Alkaline electrolyzer medium": 33.0,
+            "Alkaline electrolyzer small": 33.0,
+            "PEM electrolyzer": 33.0,
+            "SOEC": 33.0,
+            "SMR": 33.0,
+            "SMR CC": 33.0,
+            "Solid biomass steam reforming": 33.0,
+            "Biomass gasification": 33.0,
+            "Biomass gasification CC": 33.0,
+            "Natural gas steam reforming": 33.0,
+            "Natural gas steam reforming CC": 33.0,
+            "Coal gasification": 33.0,
+            "Coal gasification CC": 33.0,
+            "Heavy oil partial oxidation": 33.0,
+        }
+
+    elif category == "Ammonia / Methanol":
+        specs = {
+            "grey Haber-Bosch": 5.17,
+            "e Haber-Bosch": 5.17,
+            "grey methanol synthesis": 5.54,
+            "e-methanol synthesis": 5.54,
+        }
+
+    else:
+        return pd.DataFrame()
+
+    links = n.links[n.links["carrier"].isin(specs.keys())]
+
+    if links.empty or "p1" not in n.links_t:
+        return pd.DataFrame()
+
+    frames = []
+
+    for carrier, conversion in specs.items():
+        carrier_links = links[links["carrier"] == carrier].index
+        available = carrier_links.intersection(n.links_t.p1.columns)
+
+        if len(available) == 0:
+            continue
+
+        dispatch = -n.links_t.p1[available].clip(upper=0).sum(axis=1)
+        dispatch = dispatch.rename(rename_carrier(carrier)) / conversion / 1e3
+
+        frames.append(dispatch)
+
+    if not frames:
+        return pd.DataFrame()
+
+    return pd.concat(frames, axis=1)  # kt/h
+
+
+def compute_dispatch_annual_totals(
+    n: pypsa.Network,
+    dispatch_df: pd.DataFrame,
+    category: str,
+) -> pd.DataFrame:
+    """Compute annual totals from dispatch time series."""
+    if dispatch_df.empty:
+        return pd.DataFrame(columns=["Carrier", "Value", "Unit"])
+
+    w = get_snapshot_weightings(n)
+
+    annual = dispatch_df.multiply(w, axis=0).sum()
+
+    if category == "Electricity":
+        unit = "TWh"
+        values = annual / 1e3
+    else:
+        unit = "Mtpa"
+        values = annual / 1e3
+
+    return (
+        values.rename("Value")
+        .reset_index()
+        .rename(columns={"index": "Carrier"})
+        .assign(Unit=unit)
+    )

@@ -12,6 +12,7 @@ import os
 import tempfile
 from importlib.metadata import version
 
+import altair as alt
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -19,6 +20,9 @@ import pypsa
 from results_helpers import (
     compute_annual_flow_by_carrier,
     compute_capacity_by_carrier,
+    compute_dispatch_annual_totals,
+    compute_dispatch_by_carrier,
+    get_available_dispatch_categories,
     get_available_result_categories,
 )
 
@@ -949,9 +953,9 @@ if t_results.open:
                 default=available_runs[-1:],
             )
 
-            category = st.radio(
-                "Select result category",
-                get_available_result_categories(),
+            result_view = st.radio(
+                "Select result view",
+                ["Installed capacity", "Dispatch"],
                 horizontal=True,
             )
 
@@ -960,52 +964,132 @@ if t_results.open:
                     run: st.session_state.solved_networks[run] for run in selected_runs
                 }
 
-                if category == "Electricity":
-                    cap_df = compute_capacity_by_carrier(selected_networks, category)
-                    y_label = "GW"
-                    result_title = "Electricity - Installed / expanded capacity"
-                else:
-                    cap_df = compute_annual_flow_by_carrier(
-                        selected_networks,
-                        category,
-                        MWH_PER_TONNE,
-                    )
-                    y_label = "Mtpa"
-                    result_title = f"{category} - Annual production / capture"
-
-                st.subheader(result_title)
-
-                if cap_df.empty:
-                    st.warning(f"No result data found for {category}.")
-                else:
-                    chart_df = cap_df.pivot_table(
-                        index="scenario",
-                        columns="carrier",
-                        values="value",
-                        aggfunc="sum",
-                        fill_value=0.0,
+                if result_view == "Installed capacity":
+                    category = st.radio(
+                        "Select result category",
+                        get_available_result_categories(),
+                        horizontal=True,
                     )
 
-                    st.bar_chart(chart_df, y_label=y_label, height=600)
+                    if category == "Electricity":
+                        cap_df = compute_capacity_by_carrier(
+                            selected_networks, category
+                        )
+                        y_label = "GW"
+                        result_title = "Electricity - Installed / expanded capacity"
+                    else:
+                        cap_df = compute_annual_flow_by_carrier(
+                            selected_networks,
+                            category,
+                            MWH_PER_TONNE,
+                        )
+                        y_label = "Mtpa"
+                        result_title = f"{category} - Annual production / capture"
 
-                    table_df = (
-                        cap_df.drop(columns=["component"], errors="ignore")
-                        .pivot_table(
-                            index=["carrier", "unit"],
-                            columns="scenario",
+                    st.subheader(result_title)
+
+                    if cap_df.empty:
+                        st.warning(f"No result data found for {category}.")
+                    else:
+                        chart_df = cap_df.pivot_table(
+                            index="scenario",
+                            columns="carrier",
                             values="value",
                             aggfunc="sum",
                             fill_value=0.0,
                         )
-                        .reset_index()
-                        .rename(columns={"carrier": "Carrier", "unit": "Unit"})
-                    )
 
-                    with st.expander(f"Show {category} data table", expanded=False):
-                        st.dataframe(
-                            table_df, use_container_width=True, hide_index=True
+                        st.bar_chart(chart_df, y_label=y_label, height=600)
+
+                        table_df = (
+                            cap_df.drop(columns=["component"], errors="ignore")
+                            .pivot_table(
+                                index=["carrier", "unit"],
+                                columns="scenario",
+                                values="value",
+                                aggfunc="sum",
+                                fill_value=0.0,
+                            )
+                            .reset_index()
+                            .rename(columns={"carrier": "Carrier", "unit": "Unit"})
                         )
 
+                        with st.expander(f"Show {category} data table", expanded=False):
+                            st.dataframe(
+                                table_df,
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+
+                elif result_view == "Dispatch":
+                    dispatch_category = st.radio(
+                        "Select dispatch category",
+                        get_available_dispatch_categories(),
+                        horizontal=True,
+                    )
+
+                    dispatch_run = st.selectbox(
+                        "Select scenario for dispatch",
+                        selected_runs,
+                        index=0,
+                    )
+
+                    n_dispatch = st.session_state.solved_networks[dispatch_run]
+
+                    dispatch_df = compute_dispatch_by_carrier(
+                        n_dispatch,
+                        dispatch_category,
+                    )
+
+                    y_label = "GW" if dispatch_category == "Electricity" else "kt"
+
+                    st.subheader(f"{dispatch_category} - Dispatch")
+                    st.caption(f"Scenario: {dispatch_run}")
+
+                    if dispatch_df.empty:
+                        st.warning(f"No dispatch data found for {dispatch_category}.")
+                    else:
+                        plot_df = dispatch_df.reset_index().melt(
+                            id_vars=dispatch_df.index.name or "index",
+                            var_name="Technology",
+                            value_name="Value",
+                        )
+
+                        time_col = dispatch_df.index.name or "index"
+
+                        chart = (
+                            alt.Chart(plot_df)
+                            .mark_area()
+                            .encode(
+                                x=alt.X(f"{time_col}:T", title="Snapshot"),
+                                y=alt.Y("Value:Q", stack="zero", title=y_label),
+                                color=alt.Color("Technology:N", title="Technology"),
+                                tooltip=[
+                                    alt.Tooltip(f"{time_col}:T", title="Snapshot"),
+                                    alt.Tooltip("Technology:N"),
+                                    alt.Tooltip("Value:Q", format=",.2f"),
+                                ],
+                            )
+                            .properties(height=600)
+                        )
+
+                        st.altair_chart(chart, use_container_width=True)
+
+                        annual_table = compute_dispatch_annual_totals(
+                            n_dispatch,
+                            dispatch_df,
+                            dispatch_category,
+                        )
+
+                        with st.expander(
+                            f"Show {dispatch_category} annual totals",
+                            expanded=False,
+                        ):
+                            st.dataframe(
+                                annual_table,
+                                use_container_width=True,
+                                hide_index=True,
+                            )
             st.header("Technical Comparison")
             st.write(
                 "Only the technologies being different are shown in the table below, while the economic comparison is shown in the chart below."
