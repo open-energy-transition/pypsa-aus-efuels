@@ -189,6 +189,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hdf4-4.2.15-h2a13503_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hdf5-1.14.6-nompi_h19486de_108.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hicolor-icon-theme-0.17-ha770c72_3.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/highs-1.14.0-h171cf75_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/highspy-1.14.0-np2py311h912ec1f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/holoviews-1.22.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/hpack-4.1.0-pyhd8ed1ab_0.conda
@@ -340,7 +341,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzip-1.11.2-h6991a6a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.2-h25fd6f3_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/linkify-it-py-2.1.0-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/linopy-0.6.6-pyhc364b38_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/linopy-0.6.7-pyhc364b38_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/llvmlite-0.47.0-py311h41a00d4_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/locket-1.0.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/lxml-6.0.2-py311h8840267_2.conda
@@ -3187,6 +3188,18 @@ packages:
   purls: []
   size: 17625
   timestamp: 1771539597968
+- conda: https://conda.anaconda.org/conda-forge/linux-64/highs-1.14.0-h171cf75_0.conda
+  sha256: 67f90dff2b4a2f1944e24857d876824a2a9b727762b4130be16336845fe7576c
+  md5: 589e63ac843838bbc18c5bbd570782e7
+  depends:
+  - libstdcxx >=14
+  - libgcc >=14
+  - __glibc >=2.17,<3.0.a0
+  license: MIT
+  license_family: MIT
+  purls: []
+  size: 2520488
+  timestamp: 1775498171983
 - conda: https://conda.anaconda.org/conda-forge/linux-64/highspy-1.14.0-np2py311h912ec1f_0.conda
   sha256: 49659b4b6bfc06c92efed2630864e03e68913af90e5ae8815e6a5fa3d79bf029
   md5: 3435da995a5ca570dd18d6f29f100f2a
@@ -5392,12 +5405,12 @@ packages:
   - pkg:pypi/linkify-it-py?source=hash-mapping
   size: 26062
   timestamp: 1772476821244
-- conda: https://conda.anaconda.org/conda-forge/noarch/linopy-0.6.6-pyhc364b38_1.conda
-  sha256: 1d46bb40bcccf85c06a6c4146715c1cd4cec3185d39587233fe18c4394a41d87
-  md5: c1c64645ec79275e496eeefb689d4d47
+- conda: https://conda.anaconda.org/conda-forge/noarch/linopy-0.6.7-pyhc364b38_0.conda
+  sha256: 8d759c5c9961dcb4523362334f52521a5e5770ceafe8b17a8350ad0958bba74d
+  md5: 55d19f7062b690dd95e669e9a0bb5fba
   depends:
   - python >=3.11
-  - numpy
+  - numpy <2
   - scipy
   - bottleneck
   - toolz
@@ -5415,8 +5428,8 @@ packages:
   license_family: MIT
   purls:
   - pkg:pypi/linopy?source=hash-mapping
-  size: 100245
-  timestamp: 1774520821548
+  size: 100448
+  timestamp: 1776764613610
 - conda: https://conda.anaconda.org/conda-forge/linux-64/llvmlite-0.47.0-py311h41a00d4_0.conda
   sha256: 3cc12c29caf0cca92cf4c32b2e3a1b492e465fc5b3fd3501f8d9c3d34a2e86f6
   md5: 877e070228a8627171a0accb22c5a6c6

@@ -108,6 +108,7 @@ MWH_PER_TONNE: dict[str, float] = {
     "grey_methanol": 5.54,
     "e_methanol": 5.54,
 }
+KG_PER_LITER_DIESEL = 0.85
 
 load_data: dict[str, dict[str, int | float | str | list[str]]] = {
     "custom_h2": {
@@ -194,6 +195,7 @@ def to_fraction_discount_rate(discount_rate: float) -> float:
     """Convert discount rates above 1 from percent to fraction."""
     if pd.isna(discount_rate):
         return np.nan
+
     return discount_rate / 100 if discount_rate > 1 else discount_rate
 
 
@@ -202,14 +204,17 @@ def show_statistics(n: pypsa.Network):
         st.header("Network Statistics (rows)")
         st.write(f"Snapshots: {len(n.snapshots)}")
         comps = {}
+
         for c in n.components.keys() - ["Network", "SubNetwork"]:
             if len(getattr(n, n.components[c]["list_name"])):
                 comps[c] = len(getattr(n, n.components[c]["list_name"]))
+
         df = pd.DataFrame.from_dict(comps, orient="index", columns=["Rows"])
         # don't show details about Global Constraints and Component Types
         df = df[~df.index.str.endswith("Constraint")]
         df = df[~df.index.str.endswith("Type")]
         st.bar_chart(df, height=275)
+    return
 
 
 def compact_number_tag(value: float, decimals: int = 1) -> str:
@@ -304,7 +309,7 @@ title = "AUS eFuels"
 st.set_page_config(page_title=f"{title} UI", layout="wide")
 st.title(f"{title} Interactive Manager")
 st.write("Walk through the tabs below from left to the right ...")
-with st.expander("Disclaimer", expanded=False):
+with st.popover("Disclaimer", width="stretch", icon="⚠️"):
     st.write(
         """
         The content of this document/web page is intended for the exclusive use of **Open Energy Transition**'s client and other contractually agreed recipients. It may only be made available in whole or in part to third parties with the client’s consent and on a non-reliance basis. **Open Energy Transition** is not liable to third parties for the completeness and accuracy of the information provided therein.
@@ -389,11 +394,11 @@ with st.sidebar:
 
 # --- Tabs
 tabs = [
-    "| Welcome",
-    "| 1. Economic Parameters",
-    "| 2. Demand Parameters ",
-    "| 3. Optimization",
-    "| 4. View Results",
+    "| 👋 Welcome",
+    "| 1. 💰 Economics",
+    "| 2. 📊 Demands",
+    "| 3. ⚡ Optimization",
+    "| 4. 📈 Results",
 ]
 t_welcome, t_economic, t_demand, t_optimization, t_results = st.tabs(
     tabs, on_change="rerun"
@@ -405,22 +410,20 @@ if t_welcome.open:
         st.subheader("Welcome to the PyPSA-AUS-eFuels Interactive Manager!")
         st.write(
             """
-            This application allows you to load a PyPSA network, adjust key economic parameters, and run optimizations to see how those adjustments impact the network's costs and performance.
+            Use the sidebar to load your network and set project targets. Then, navigate through the tabs to manage different aspects of your project (economic and demand parameters).
 
-            Use the sidebar to load your network and set project targets. Then, navigate through the tabs to manage different aspects of your project.
-
-            This application has been developed during a project between **Open Energy Transition** and **Sagax Capital / Keshik Capital** to assess the impact on Australia on local Ammonia and Methanol production.
-
-            In 2025, Australia's **Diesel** consumption was about 32 bn liter or 27.2 MTPA (million ton per annum). About 85% (or more than 23 MTPA) needed to be imported. Assuming AUD 3/liter, this makes more than AUD ~80 bn of import costs every year. A historical growth rate of 5-10%/year has been observed and is expected going forward.
-            **Ammonia** consumption was about 2 MTPA, where about 50% was used in agriculture, 35% in mining and explosives, and the rest in industry and chemicals.
+            In 2025, Australia's **Diesel** consumption was about 32 bn liter or 27.2 Mtpa (million ton per annum). About 85% (or more than 23 Mtpa) needed to be imported. Assuming AUD 3/liter, this makes more than AUD ~80 bn of import costs every year. A historical growth rate of 5-10%/year has been observed and is expected going forward.
+            **Ammonia** consumption was about 2 Mtpa, where about 50% was used in agriculture, 35% in mining and explosives, and the rest in industry and chemicals.
             While short distance truck transport and a significant share of mining might be replaced by electric vehicles, long distance transport via truck and train likely still rely on liquid fuels for the foreseeable future.
 
-            **A diesel replacement by methanol of e.g., 10% (~2.3 MTPA) would save AUD ~8 bn per year in import costs, which could be used to invest in local production, local renewable energy and local employment instead.**
+            **10% (~2.3 Mtpa or 2.7 million liters) diesel replacement would save AUD ~8 bn per year in import costs, which could be used to invest in local production, local renewable energy and local employment instead.**
             """
         )
-        with st.expander("Project Description", expanded=False):
+        with st.popover("Project Description", width="stretch", icon="📄"):
             st.write(
                 """
+                This application has been developed during a project between **Open Energy Transition** and **Sagax Capital / Keshik Capital** to assess the impact on Australia on local Ammonia and Methanol production.
+
                 The project aims to evaluate the potential for local production of these chemicals using renewable energy sources, and how this does help Australia in its energy transition and resilience.
 
                 **The entire project source is available on GitHub: https://github.com/open-energy-transition/pypsa-aus-efuel.**
@@ -478,17 +481,14 @@ if t_economic.open:
                     )
 
                 col1, col2, col3, col4 = st.columns(4, vertical_alignment="top")
-                with col2:
-                    st.write("**Discount Rate (%)**")
-                with col3:
-                    st.write("**Overnight Investment Cost (AUD/MW)**")
-                with col4:
-                    st.write("**Marginal Cost (AUD/MWh)**")
+                col2.write("**Discount Rate (%)**")
+                col3.write("**Overnight Investment Cost (AUD/MW)**")
+                col4.write("**Marginal Cost (AUD/MWh)**")
 
                 for d in tech_data:
                     col1, col2, col3, col4 = st.columns(4, vertical_alignment="top")
-                    with col1:
-                        st.write(f"**{tech_data[d]['label']}**")
+                    col1.write(f"**{tech_data[d]['label']}**")
+
                     with col2:
                         old_ui_dr[d] = round_multiple(old_dr[d], 0.1)
 
@@ -501,6 +501,7 @@ if t_economic.open:
                             step=0.1,
                             format="%.1f%%",
                         )
+
                     with col3:
                         initial_cc = investment_cost(old_cc[d], new_dr[d], old_lt[d])
                         st.session_state.setdefault(f"initial_cc_{d}", initial_cc)
@@ -516,6 +517,7 @@ if t_economic.open:
                             step=0.1,
                             format="%,.1f AUD/MW",
                         )
+
                     with col4:
                         old_ui_mc[d] = round_multiple(old_mc[d], 0.1)
 
@@ -639,21 +641,15 @@ if t_demand.open:
                     new_cost = st.session_state.new_cost
 
                 col1, col2, col3, col4 = st.columns(4, vertical_alignment="top")
-                with col2:
-                    st.write("**Current Demand**")
-                with col3:
-                    st.write("**New / Proposed Demand**")
-                with col4:
-                    st.write("**Avoided Import Price / Tonne**")
+                col2.write("**Current Demand**")
+                col3.write("**New / Proposed Demand**")
+                col4.write("**Avoided Import Price / Tonne**")
 
                 for l in load_data:
                     col1, col2, col3, col4 = st.columns(4, vertical_alignment="top")
 
-                    with col1:
-                        st.write(f"**{load_data[l]['label']}**")
-
-                    with col2:
-                        st.write(f"{old_multiplier[l]:.1f} MTPA")
+                    col1.write(f"**{load_data[l]['label']}**")
+                    col2.write(f"{old_multiplier[l]:.1f} Mtpa")
 
                     with col3:
                         new_multiplier[l] = st.slider(
@@ -663,7 +659,7 @@ if t_demand.open:
                             max_value=20.0,
                             step=0.1,
                             value=round_multiple(old_multiplier[l], 0.1),
-                            format="%.1f MTPA",
+                            format="%.1f Mtpa",
                         )
 
                     with col4:
@@ -683,12 +679,12 @@ if t_demand.open:
                                 * MWH_PER_TONNE["diesel"]
                                 / MWH_PER_TONNE[l]
                                 / 1000
-                                / 0.85
+                                / KG_PER_LITER_DIESEL
                             )
 
                             st.caption(
-                                f"Equivalent diesel replacement value: "
-                                f"{diesel_equivalent:.2f} AUD/litre diesel"
+                                f"Equivalent Diesel Replacement Value: "
+                                f"{diesel_equivalent:.2f} AUD/liter"
                             )
 
                 st.session_state.old_multiplier = old_multiplier
@@ -783,9 +779,10 @@ if t_optimization.open:
 
             with st.expander("Snapshot Options", expanded=True):
                 col1, col2, col3 = st.columns(3, vertical_alignment="top")
+
                 with col1:
                     run_mode = st.radio(
-                        "Select the number of desired optimization snapshots:",
+                        "Select desired optimization snapshots:",
                         ["Full Year", "Full Month", "Week per Month"],
                         index=2,
                         horizontal=True,
@@ -793,7 +790,7 @@ if t_optimization.open:
 
                 with col2:
                     months = st.multiselect(
-                        "Select the months to consider:",
+                        "Select months to consider:",
                         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                         default=[1],
                     )
@@ -801,7 +798,7 @@ if t_optimization.open:
                 with col3:
                     if run_mode == "Week per Month":
                         weeks = st.radio(
-                            "Select the week within each selected month:",
+                            "Select week within selected months:",
                             [1, 2, 3, 4],
                             index=0,
                             horizontal=True,
@@ -862,6 +859,14 @@ if t_optimization.open:
                     ):
                         n2.sanitize()
 
+                    if solver_name == "OETC":
+                        st.warning(
+                            """
+                            The Open Energy Transition Cluster (OETC) is not configured yet. Therefore 'highs' is used.
+                            """
+                        )
+                        solver_name = "highs"
+
                     status, condition = n2.optimize(
                         solver_name=solver_name,
                         assign_all_duals=False,
@@ -899,7 +904,7 @@ if t_optimization.open:
                     optimized_system_cost = n2.objective
                     expanded_cap = n2.statistics.expanded_capacity().round(1)
 
-                    expanded_cap[("Economics", "New Annuity")] = round(
+                    expanded_cap[("Economics", "Annuity")] = round(
                         optimized_system_cost / 1e6, 1
                     )  # million AUD
 
@@ -931,8 +936,6 @@ if t_optimization.open:
 
                     st.write(
                         """
-                        Successfully optimized the network with the new parameters.
-
                         Check the 'View Results' tab for details.
                         """
                     )
@@ -942,7 +945,8 @@ if t_optimization.open:
 # ---TAB RESULTS
 if t_results.open:
     with t_results:
-        if st.session_state.results is not None:
+        # if st.session_state.results is not None:
+        if len(st.session_state.solved_networks) > 0:
             st.header("Results Explorer")
 
             available_runs = list(st.session_state.solved_networks.keys())
@@ -950,7 +954,8 @@ if t_results.open:
             selected_runs = st.multiselect(
                 "Select solved scenarios",
                 available_runs,
-                default=available_runs[-1:],
+                default=available_runs,  # [-1:],
+                width="stretch",
             )
 
             result_view = st.radio(
@@ -976,7 +981,7 @@ if t_results.open:
                             selected_networks, category
                         )
                         y_label = "GW"
-                        result_title = "Electricity - Installed / expanded capacity"
+                        result_title = "Electricity - Installed / Expanded Capacity"
                     else:
                         cap_df = compute_annual_flow_by_carrier(
                             selected_networks,
@@ -984,7 +989,7 @@ if t_results.open:
                             MWH_PER_TONNE,
                         )
                         y_label = "Mtpa"
-                        result_title = f"{category} - Annual production / capture"
+                        result_title = f"{category} - Annual Production / Capture"
 
                     st.subheader(result_title)
 
@@ -1017,7 +1022,7 @@ if t_results.open:
                         with st.expander(f"Show {category} data table", expanded=False):
                             st.dataframe(
                                 table_df,
-                                use_container_width=True,
+                                width="stretch",
                                 hide_index=True,
                             )
 
@@ -1073,7 +1078,7 @@ if t_results.open:
                             .properties(height=600)
                         )
 
-                        st.altair_chart(chart, use_container_width=True)
+                        st.altair_chart(chart, width="stretch")
 
                         annual_table = compute_dispatch_annual_totals(
                             n_dispatch,
@@ -1087,34 +1092,41 @@ if t_results.open:
                         ):
                             st.dataframe(
                                 annual_table,
-                                use_container_width=True,
+                                width="stretch",
                                 hide_index=True,
                             )
-            st.header("Technical Comparison")
-            st.write(
-                "Only the technologies being different are shown in the table below, while the economic comparison is shown in the chart below."
-            )
-            df = st.session_state.results
-            # don't show economic details in the technical comparison
-            df = df[~df.index.get_level_values(0).str.contains("Economics")]
-            df = df[df.index.get_level_values(0).str.contains("Link")]
-            # only show rows where there is a difference in the values across runs
-            df = df[df.nunique(axis=1) > 1]
-            st.dataframe(df.T.style.format("{:.1f}"))
-            if "scenario_metadata" in st.session_state:
-                st.subheader("Scenario descriptions")
 
-                for k, v in st.session_state.scenario_metadata.items():
-                    st.write(f"**{k}**")
-                    st.caption(v)
-            st.header("Economic Comparison")
-            df = st.session_state.results
-            df = df / 1e3  # convert to million AUD
-            # only show economic details
-            df = df[df.index.get_level_values(0).str.contains("Economics")].round(1)
-            df = df.reset_index().drop(columns=["component"])
-            df = df.set_index("carrier")
-            st.bar_chart(df.T, y_label="Runs", x_label="Million AUD", horizontal=True)
+                st.header("Technical Comparison")
+                st.write(
+                    "Only the technologies being different are shown in the table below, while the economic comparison is shown in the chart below."
+                )
+                df = st.session_state.results
+                # don't show economic details in the technical comparison
+                df = df[~df.index.get_level_values(0).str.contains("Economics")]
+                df = df[df.index.get_level_values(0).str.contains("Link")]
+                # only show rows where there is a difference in the values across runs
+                df = df[df.nunique(axis=1) > 1].T
+                st.dataframe(df.T.style.format("{:.1f}"))
+                if "scenario_metadata" in st.session_state:
+                    st.subheader("Scenario descriptions")
+
+                    for k, v in st.session_state.scenario_metadata.items():
+                        st.write(f"**{k}**")
+                        st.caption(v)
+
+                st.header("Economic Comparison")
+                df = st.session_state.results
+                df = df / 1e3  # convert to million AUD
+                # only show economic details
+                df = df[df.index.get_level_values(0).str.contains("Economics")].round(1)
+                df = df.reset_index().drop(columns=["component"])
+                df = df.set_index("carrier")
+                st.bar_chart(
+                    df.T,
+                    x_label="Runs",
+                    y_label="Annual Cost (Million AUD)",
+                    horizontal=True,
+                )
         else:
             st.info(
                 "Please load a network and run an optimization to see results here ..."
