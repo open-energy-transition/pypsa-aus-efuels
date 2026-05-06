@@ -5,3 +5,4 @@ highspy
 linopy
 pypsa
 streamlit
+zenodo_get

@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pypsa
+import requests
 from results_helpers import (
     compute_annual_flow_by_carrier,
     compute_capacity_by_carrier,
@@ -341,42 +342,82 @@ if "solved_networks" not in st.session_state:
 if "scenario_metadata" not in st.session_state:
     st.session_state.scenario_metadata = {}
 
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.sidebar.header("Networks")
-    with st.expander("Selected PyPSA Network", expanded=True):
-        uploaded_file = st.file_uploader(
-            "Choose a PyPSA NetCDF file", type=["nc"], max_upload_size=50  # 50 MB limit
+
+    with st.expander("Default PyPSA Network", expanded=True):
+        zenodo_record_id = st.text_input("Zenodo Record ID", "20049009", disabled=True)
+        zenodo_file_name = st.text_input(
+            "File Name",
+            "elec_s_10_ec_lv1_Co2L-3h_3h_2030_0.071_AB_0export.nc",
+            disabled=True,
         )
 
-    if uploaded_file is not None and st.session_state.network_loaded is False:
-        # PyPSA needs a file path, so we save the uploaded bytes to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".nc") as tmp_file:
-            tmp_file.write(uploaded_file.getvalue())
-            tmp_path = tmp_file.name
+        if st.button("Download"):
+            api_url = f"https://zenodo.org/api/records/{zenodo_record_id}"
+            res = requests.get(api_url).json()
+            file_info = next(
+                (f for f in res["files"] if f["key"] == zenodo_file_name), None
+            )
+            if file_info:
+                SAVE_DIR = "./data"
+                if not os.path.exists(SAVE_DIR):
+                    os.makedirs(SAVE_DIR)
+                download_url = file_info["links"]["self"]
+                file_data = requests.get(download_url).content
+                save_path = os.path.join(SAVE_DIR, zenodo_file_name)
+                with requests.get(download_url, stream=True) as r:
+                    r.raise_for_status()
+                    with open(save_path, "wb") as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
 
-        # 2. Load the Network
-        with st.spinner("Loading network..."):
-            n = pypsa.Network(tmp_path)
-            g = n.generators
-            if "discount_rate" not in g.columns:
-                g["discount_rate"] = st.session_state.dr / 100
+                n = pypsa.Network(f"{SAVE_DIR}/{zenodo_file_name}")
+                g = n.generators
+                if "discount_rate" not in g.columns:
+                    g["discount_rate"] = st.session_state.dr / 100
+                else:
+                    g["discount_rate"] = g["discount_rate"].apply(
+                        to_fraction_discount_rate
+                    )
+                st.session_state.n = n
+                st.session_state.costs_modified = False
+                st.session_state.network_loaded = True
+                st.success("Network loaded successfully!")
             else:
-                g["discount_rate"] = g["discount_rate"].apply(to_fraction_discount_rate)
-            st.session_state.n = n
-            st.session_state.costs_modified = False
-            st.session_state.network_loaded = True
-            st.success("Network loaded successfully!")
+                st.error("File not found in the given Zenodo record.")
 
-        # Cleanup the temp file
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
+    with st.expander("Local PyPSA-AUS Network", expanded=False):
+        uploaded_file = st.file_uploader(
+            "Choose a PyPSA NetCDF file", type=["nc"], max_upload_size=5  # 5 MB limit
+        )
 
-    if st.sidebar.button("Load Example 'scigrid_de'"):
-        n = pypsa.examples.scigrid_de()
-        st.session_state.n = n
-        st.session_state.costs_modified = False
-        st.success("Example network loaded!")
+        if uploaded_file is not None and st.session_state.network_loaded is False:
+            # PyPSA needs a file path, so we save the uploaded bytes to a temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".nc") as tmp_file:
+                tmp_file.write(uploaded_file.getvalue())
+                tmp_path = tmp_file.name
+
+            # 2. Load the Network
+            with st.spinner("Loading network..."):
+                n = pypsa.Network(tmp_path)
+                g = n.generators
+                if "discount_rate" not in g.columns:
+                    g["discount_rate"] = st.session_state.dr / 100
+                else:
+                    g["discount_rate"] = g["discount_rate"].apply(
+                        to_fraction_discount_rate
+                    )
+                st.session_state.n = n
+                st.session_state.costs_modified = False
+                st.session_state.network_loaded = True
+                st.success("Network loaded successfully!")
+
+            # Cleanup the temp file
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
 
     if st.session_state.network_loaded:
         show_statistics(st.session_state.n)
@@ -436,9 +477,7 @@ if t_economic.open:
         if st.session_state.n is None:
             st.info("Please load a network ...")
             st.write(
-                """
-                After loading a network, you are able to adjust the economic parameters.
-                """
+                "After loading a network, you are able to adjust the economic parameters."
             )
         else:
             st.header("Economic Parameters")
@@ -585,9 +624,7 @@ if t_demand.open:
         if st.session_state.n is None:
             st.info("Please load a network ...")
             st.write(
-                """
-                After loading a network, you are able to adjust the demand parameters.
-                """
+                "After loading a network, you are able to adjust the demand parameters."
             )
         else:
             st.header("Demand Parameters")
@@ -726,11 +763,7 @@ if t_optimization.open:
     with t_optimization:
         if st.session_state.n is None:
             st.info("Please load a network ...")
-            st.write(
-                """
-                After loading a network, you are able to optimize the network.
-                """
-            )
+            st.write("After loading a network, you are able to optimize the network.")
         else:
             n = st.session_state.n
             new_multiplier = st.session_state.new_multiplier
@@ -861,9 +894,7 @@ if t_optimization.open:
 
                     if solver_name == "OETC":
                         st.warning(
-                            """
-                            The Open Energy Transition Cluster (OETC) is not configured yet. Therefore 'highs' is used.
-                            """
+                            "The Open Energy Transition Cluster (OETC) is not configured yet. Therefore 'highs' is used."
                         )
                         solver_name = "highs"
 
@@ -934,11 +965,7 @@ if t_optimization.open:
                     # save the cap_df to be used in the 'View Results' tab
                     st.session_state.results = cap_df
 
-                    st.write(
-                        """
-                        Check the 'View Results' tab for details.
-                        """
-                    )
+                    st.write("Check the 'View Results' tab for details.")
                 else:
                     st.error(f"Solver failed: {condition}")
 
@@ -1108,7 +1135,10 @@ if t_results.open:
                 df = df[df.nunique(axis=1) > 1].T
                 st.dataframe(df.T.style.format("{:.1f}"))
                 if "scenario_metadata" in st.session_state:
-                    st.subheader("Scenario descriptions")
+                    st.subheader("Scenario Descriptions")
+                    st.write(
+                        "Below you can find the descriptions for each optimized scenario."
+                    )
 
                     for k, v in st.session_state.scenario_metadata.items():
                         st.write(f"**{k}**")
